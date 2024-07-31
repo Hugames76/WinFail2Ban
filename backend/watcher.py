@@ -20,8 +20,10 @@ SERVER_URL = "http://127.0.0.1:5000"
 def set_watcher_config(max_attempts, ban_duration, ips):
     global MAX_ATTEMPTS, BAN_DURATION, IGNORE_IPS
     MAX_ATTEMPTS = max_attempts
+    print (MAX_ATTEMPTS)
     BAN_DURATION = ban_duration
     IGNORE_IPS = set(ips)
+    return MAX_ATTEMPTS, BAN_DURATION, IGNORE_IPS
 
 def watcher(log_name, stop_event, start_time, *event_ids):
     server = '127.0.0.1'
@@ -36,16 +38,16 @@ def watcher(log_name, stop_event, start_time, *event_ids):
         events = win32evtlog.ReadEventLog(hand, flags, record_number)
         if events:
             for event in events:
-                event_time = event.TimeGenerated
                 if event.EventID in event_ids:
                     lines = event.StringInserts
                     if lines:
                         for line in lines:
                             ip = extract_ip(line)
                             if ip and ip not in IGNORE_IPS:
+                                event_time = event.TimeGenerated
+                                handle_total_attempt(ip)
                                 if event_time >= start_time:
                                     handle_failed_attempt(ip)
-                                handle_total_attempt(ip)
                 record_number = event.RecordNumber + 1
         else:
             time.sleep(1)
@@ -66,10 +68,12 @@ def handle_failed_attempt(ip):
     requests.post(f"{SERVER_URL}/log_attempt/{ip}", json={"is_failed": True})
 
     if failed_attempts[ip] >= MAX_ATTEMPTS:
+        print(f"Blocking IP: {ip}")
         block_ip(ip)
 
 def handle_total_attempt(ip):
     requests.post(f"{SERVER_URL}/log_attempt/{ip}", json={"is_failed": False})
+    total_attempts[ip] += 1
 
 def block_ip(ip):
     requests.post(f"{SERVER_URL}/block_ip/{ip}")

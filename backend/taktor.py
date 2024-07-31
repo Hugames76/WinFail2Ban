@@ -1,25 +1,39 @@
 import subprocess
 
+# GOOD -- Use an allowlist
+# COMMANDS = {
+#     "list" :"ls",
+#     "stat" : "stat"
+# }
+
+# def command_execution_safe(request):
+#     if request.method == 'POST':
+#         action = request.POST.get('action', '')
+#         #GOOD -- Use an allowlist
+#         subprocess.call(["application", COMMANDS[action]])
+
+
+COMMANDS = {
+    "check": 'netsh advfirewall firewall show rule name="Block {ip}"',
+    "block": 'netsh advfirewall firewall add rule name="Block {ip}" dir=in action=block remoteip={ip}',
+    "unblock": 'netsh advfirewall firewall delete rule name="Block {ip}"'
+}
+
 def check_rule_exists(ip):
     try:
-        result = subprocess.run(f'netsh advfirewall firewall show rule name="Block {ip}"', shell=True, check=True, capture_output=True)
-        return "No rules match the specified criteria" not in result.stdout.decode()
+        result = subprocess.call(COMMANDS["check"].format(ip=ip), shell=True)
+        return result == 0
     except subprocess.CalledProcessError as e:
-        return False
+        print(f"Error checking rule for IP {ip}: {e}")
 
 def block_ip(ip):
-    if check_rule_exists(ip):
-        print(f"A rule already exists for IP {ip}.")
-        return
     try:
-        subprocess.run(f'netsh advfirewall firewall add rule name="Block {ip}" dir=in action=block enable=yes remoteip={ip}', shell=True, check=True)
-        print(f"IP {ip} block with success.")
+        subprocess.call(COMMANDS["block"].format(ip=ip), shell=True)
     except subprocess.CalledProcessError as e:
-        print(f"Error while blocking IP {ip}: {e}")
-
+        print(f"Error blocking IP {ip}: {e}")
+        
 def unblock_ip(ip):
     try:
-        subprocess.run(f'netsh advfirewall firewall delete rule name="Block {ip}"', shell=True, check=True)
-        print(f"IP {ip} unblock with success.")
+        subprocess.call(COMMANDS["unblock"].format(ip=ip), shell=True)
     except subprocess.CalledProcessError as e:
-        print(f"Error while unblocking IP {ip}: {e}")
+        print(f"Error unblocking IP {ip}: {e}")

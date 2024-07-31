@@ -45,7 +45,6 @@ def log_attempt(ip):
         failed_attempts[ip] += 1
     return jsonify({"message": f"Logged attempt for IP {ip}", "attempts": failed_attempts[ip]})
 
-
 @app.route('/block_ip/<ip>', methods=['POST'])
 def block(ip):
     if ip not in blocked_ips:
