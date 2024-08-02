@@ -1,4 +1,4 @@
-import pytest
+import pytest, datetime 
 from backend.watcher import set_watcher_config, handle_total_attempt, handle_failed_attempt, failed_attempts, total_attempts
 
 def test_set_watcher_config():
@@ -7,16 +7,24 @@ def test_set_watcher_config():
 
 def test_handle_total_attempt(mocker):
     ip = "192.168.1.1"
-    mock_total_attempts = mocker.patch('backend.watcher.total_attempts', {ip: 10}, create=True)
-    mock_requests_post = mocker.patch('requests.post')
-    handle_total_attempt(ip)
-    assert mock_total_attempts[ip] == 11
-    mock_requests_post.assert_called_with(f"http://127.0.0.1:5000/log_attempt/{ip}", json={"is_failed": False})
+    event_time = datetime.datetime.now()
+    is_failed = True
+    
+    mock_failed_attempts = mocker.patch('backend.watcher.failed_attempts', {ip: {"count": 2, "timestamps": [event_time.isoformat()]}}, create=False)
+    mocker.patch("requests.post")
+    handle_total_attempt(ip, event_time, is_failed)
+    assert mock_failed_attempts[ip]["count"] == 3
+    assert mock_failed_attempts[ip]["timestamps"] == [event_time.isoformat(), event_time.isoformat()]
+    
+
 
 def test_handle_failed_attempt(mocker):
     ip = "192.168.1.1"
-    mock_failed_attempt = mocker.patch('backend.watcher.failed_attempts', {ip: 2}, create=False)
-    mock_requests_post = mocker.patch('requests.post')
-    handle_failed_attempt(ip)
-    assert mock_failed_attempt[ip] == 3
-    mock_requests_post.assert_called_with(f"http://127.0.0.1:5000/log_attempt/{ip}", json={"is_failed": True})
+    event_time = datetime.datetime.now()
+    is_failed = True
+    
+    mock_failed_attempts = mocker.patch('backend.watcher.failed_attempts', {ip: {"count": 2, "timestamps": [event_time.isoformat()]}}, create=False)
+    mocker.patch("requests.post")
+    handle_failed_attempt(ip, event_time)
+    assert mock_failed_attempts[ip]["count"] == 3
+    assert mock_failed_attempts[ip]["timestamps"] == [event_time.isoformat(), event_time.isoformat()]

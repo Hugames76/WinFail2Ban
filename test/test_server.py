@@ -13,5 +13,13 @@ def test_index(client):
     assert rv.status_code == 200
 
 def test_status(client):
-    rv = client.get('/status')
+    rv = client.get('/api/dashboard')
+    assert rv.status_code == 200
+
+def test_rules(client):
+    rv = client.get('/api/rules')
+    assert rv.status_code == 200
+
+def test_logs(client):
+    rv = client.get('/api/logs')
     assert rv.status_code == 200
